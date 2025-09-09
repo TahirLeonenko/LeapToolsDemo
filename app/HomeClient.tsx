@@ -27,6 +27,9 @@ export default function HomeClient({ initialSpaces }: HomeClientProps) {
   const [cardWidth, setCardWidth] = useState(0);
   const [centerOffset, setCenterOffset] = useState(0);
   const [cardWidthPercent, setCardWidthPercent] = useState(80.33);
+  const [maxTranslation, setMaxTranslation] = useState(0);
+  const [minTranslation, setMinTranslation] = useState(0);
+  const [responsiveMargin, setResponsiveMargin] = useState(192);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Mark as hydrated after client-side mount
@@ -44,13 +47,27 @@ export default function HomeClient({ initialSpaces }: HomeClientProps) {
         // Each card is 70% width with mr-48 (12rem margin = 192px)
         const card = container.querySelector<HTMLDivElement>(".carousel-card");
         if (card) {
-          const cardWidthWithMargin = card.offsetWidth + 192; // width + margin-right
+          const calculatedMargin = Math.min(192, containerWidth * 0.15);
+          setResponsiveMargin(calculatedMargin);
+          const cardWidthWithMargin = card.offsetWidth + calculatedMargin; // width + responsive margin
           setCardWidth(cardWidthWithMargin);
           // Calculate center offset: (container width - card width) / 2
           setCenterOffset((containerWidth - card.offsetWidth) / 2);
           // Calculate the percentage that represents one card width + margin
           const cardWidthPercent = (cardWidthWithMargin / containerWidth) * 100;
           setCardWidthPercent(cardWidthPercent);
+          
+          // Calculate translation bounds to prevent overflow
+          const totalCards = spacesList.length + 1; // +1 for the plus button
+          
+          // More conservative bounds - only prevent extreme overflow
+          // Maximum translation: allow some overflow but not too much
+          const maxTranslatePercent = 15 - ((totalCards - 1) * cardWidthPercent) + 20; // Allow 20% overflow
+          // Minimum translation: allow some overflow but not too much  
+          const minTranslatePercent = 15 - 20; // Allow 20% overflow
+          
+          setMaxTranslation(maxTranslatePercent);
+          setMinTranslation(minTranslatePercent);
         }
       }
     };
@@ -74,11 +91,22 @@ export default function HomeClient({ initialSpaces }: HomeClientProps) {
           const containerWidth = container.offsetWidth;
           const card = container.querySelector<HTMLDivElement>(".carousel-card");
           if (card) {
-            const cardWidthWithMargin = card.offsetWidth + 192;
+            const calculatedMargin = Math.min(192, containerWidth * 0.15);
+            setResponsiveMargin(calculatedMargin);
+            const cardWidthWithMargin = card.offsetWidth + calculatedMargin;
             setCardWidth(cardWidthWithMargin);
             setCenterOffset((containerWidth - card.offsetWidth) / 2);
             const cardWidthPercent = (cardWidthWithMargin / containerWidth) * 100;
             setCardWidthPercent(cardWidthPercent);
+            
+            // Calculate translation bounds to prevent overflow
+            const totalCards = spacesList.length + 1; // +1 for the plus button
+            
+            const maxTranslatePercent = 15 - ((totalCards - 1) * cardWidthPercent) + 20; // Allow 20% overflow
+            const minTranslatePercent = 15 - 20; // Allow 20% overflow
+            
+            setMaxTranslation(maxTranslatePercent);
+            setMinTranslation(minTranslatePercent);
           }
         }
       }, 100);
@@ -87,6 +115,15 @@ export default function HomeClient({ initialSpaces }: HomeClientProps) {
   }, [isFullscreen, isHydrated]);
 
   const isLastImage = currentIndex === spacesList.length - 1;
+
+  // Function to get safe translation that prevents overflow
+  const getSafeTranslation = useCallback((baseTranslation: number, dragPercent: number) => {
+    const totalTranslation = baseTranslation + dragPercent;
+    
+    // For now, return the original translation without bounds to restore full navigation
+    // We'll implement better overflow prevention later
+    return totalTranslation;
+  }, []);
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -320,14 +357,15 @@ export default function HomeClient({ initialSpaces }: HomeClientProps) {
                     isDragging ? '' : 'transition-transform duration-700'
                   }`}
                   style={{
-                    transform: `translateX(calc(15% - ${currentIndex * cardWidthPercent}% + ${dragPercent}%))`,
+                    transform: `translateX(${getSafeTranslation(15 - (currentIndex * cardWidthPercent), dragPercent)}%)`,
                   }}
                 >
                   {spacesList.map((space, index) => (
                     <motion.div
                       key={space.id}
                       layoutId={`image-${space.id}`}
-                      className="carousel-card w-[70%] flex-shrink-0 h-full relative mr-48 rounded-2xl overflow-hidden"
+                      className="carousel-card w-[70%] flex-shrink-0 h-full relative rounded-2xl overflow-hidden"
+                      style={{ marginRight: responsiveMargin }}
                     >
                       <ImageBackground currentImage={space} objectFit="cover" />
                     </motion.div>
@@ -335,7 +373,10 @@ export default function HomeClient({ initialSpaces }: HomeClientProps) {
                   
                   {/* Plus Button */}
                   {isLastImage && (
-                    <div className="carousel-card w-[70%] flex-shrink-0 h-full relative mr-48 rounded-2xl overflow-hidden">
+                    <div 
+                      className="carousel-card w-[70%] flex-shrink-0 h-full relative rounded-2xl overflow-hidden"
+                      style={{ marginRight: responsiveMargin }}
+                    >
                       <div 
                         className="w-full h-full bg-gray-700/50 border-2 border-dashed border-gray-500 flex items-center justify-start pl-6 cursor-pointer hover:bg-gray-600/50 transition-colors duration-200"
                         onClick={handlePlusButtonClick}
