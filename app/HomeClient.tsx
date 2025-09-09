@@ -29,7 +29,7 @@ export default function HomeClient({ initialSpaces }: HomeClientProps) {
   const [cardWidthPercent, setCardWidthPercent] = useState(80.33);
   const [maxTranslation, setMaxTranslation] = useState(0);
   const [minTranslation, setMinTranslation] = useState(0);
-  const [responsiveMargin, setResponsiveMargin] = useState(192);
+  const [responsiveMargin, setResponsiveMargin] = useState(96);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Mark as hydrated after client-side mount
@@ -47,7 +47,7 @@ export default function HomeClient({ initialSpaces }: HomeClientProps) {
         // Each card is 70% width with mr-48 (12rem margin = 192px)
         const card = container.querySelector<HTMLDivElement>(".carousel-card");
         if (card) {
-          const calculatedMargin = Math.min(192, containerWidth * 0.15);
+          const calculatedMargin = Math.min(96, containerWidth * 0.08);
           setResponsiveMargin(calculatedMargin);
           const cardWidthWithMargin = card.offsetWidth + calculatedMargin; // width + responsive margin
           setCardWidth(cardWidthWithMargin);
@@ -91,7 +91,7 @@ export default function HomeClient({ initialSpaces }: HomeClientProps) {
           const containerWidth = container.offsetWidth;
           const card = container.querySelector<HTMLDivElement>(".carousel-card");
           if (card) {
-            const calculatedMargin = Math.min(192, containerWidth * 0.15);
+            const calculatedMargin = Math.min(96, containerWidth * 0.08);
             setResponsiveMargin(calculatedMargin);
             const cardWidthWithMargin = card.offsetWidth + calculatedMargin;
             setCardWidth(cardWidthWithMargin);
