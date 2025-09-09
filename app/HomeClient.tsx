@@ -24,12 +24,67 @@ export default function HomeClient({ initialSpaces }: HomeClientProps) {
   const [isAddSpaceModalOpen, setIsAddSpaceModalOpen] = useState(false);
   const [isEditSpaceModalOpen, setIsEditSpaceModalOpen] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [cardWidth, setCardWidth] = useState(0);
+  const [centerOffset, setCenterOffset] = useState(0);
+  const [cardWidthPercent, setCardWidthPercent] = useState(80.33);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Mark as hydrated after client-side mount
   useEffect(() => {
     setIsHydrated(true);
   }, []);
+
+  // Calculate responsive card width percentage
+  useEffect(() => {
+    const updateSizes = () => {
+      // Only calculate when carousel is visible (not in fullscreen)
+      if (containerRef.current && !isFullscreen) {
+        const container = containerRef.current;
+        const containerWidth = container.offsetWidth;
+        // Each card is 70% width with mr-48 (12rem margin = 192px)
+        const card = container.querySelector<HTMLDivElement>(".carousel-card");
+        if (card) {
+          const cardWidthWithMargin = card.offsetWidth + 192; // width + margin-right
+          setCardWidth(cardWidthWithMargin);
+          // Calculate center offset: (container width - card width) / 2
+          setCenterOffset((containerWidth - card.offsetWidth) / 2);
+          // Calculate the percentage that represents one card width + margin
+          const cardWidthPercent = (cardWidthWithMargin / containerWidth) * 100;
+          setCardWidthPercent(cardWidthPercent);
+        }
+      }
+    };
+
+    // Update sizes after hydration when elements are rendered and not in fullscreen
+    if (isHydrated && !isFullscreen) {
+      updateSizes();
+    }
+
+    window.addEventListener("resize", updateSizes);
+    return () => window.removeEventListener("resize", updateSizes);
+  }, [isHydrated, isFullscreen]);
+
+  // Recalculate when transitioning from fullscreen to carousel
+  useEffect(() => {
+    if (!isFullscreen && isHydrated) {
+      // Small delay to ensure DOM is updated
+      const timer = setTimeout(() => {
+        if (containerRef.current) {
+          const container = containerRef.current;
+          const containerWidth = container.offsetWidth;
+          const card = container.querySelector<HTMLDivElement>(".carousel-card");
+          if (card) {
+            const cardWidthWithMargin = card.offsetWidth + 192;
+            setCardWidth(cardWidthWithMargin);
+            setCenterOffset((containerWidth - card.offsetWidth) / 2);
+            const cardWidthPercent = (cardWidthWithMargin / containerWidth) * 100;
+            setCardWidthPercent(cardWidthPercent);
+          }
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isFullscreen, isHydrated]);
 
   const isLastImage = currentIndex === spacesList.length - 1;
 
@@ -265,14 +320,14 @@ export default function HomeClient({ initialSpaces }: HomeClientProps) {
                     isDragging ? '' : 'transition-transform duration-700'
                   }`}
                   style={{
-                    transform: `translateX(calc(15% - ${currentIndex * 80.33}% + ${dragPercent}%))`,
+                    transform: `translateX(calc(15% - ${currentIndex * cardWidthPercent}% + ${dragPercent}%))`,
                   }}
                 >
                   {spacesList.map((space, index) => (
                     <motion.div
                       key={space.id}
                       layoutId={`image-${space.id}`}
-                      className="w-[70%] flex-shrink-0 h-full relative mr-48 rounded-2xl overflow-hidden"
+                      className="carousel-card w-[70%] flex-shrink-0 h-full relative mr-48 rounded-2xl overflow-hidden"
                     >
                       <ImageBackground currentImage={space} objectFit="cover" />
                     </motion.div>
@@ -280,7 +335,7 @@ export default function HomeClient({ initialSpaces }: HomeClientProps) {
                   
                   {/* Plus Button */}
                   {isLastImage && (
-                    <div className="w-[70%] flex-shrink-0 h-full relative mr-48 rounded-2xl overflow-hidden">
+                    <div className="carousel-card w-[70%] flex-shrink-0 h-full relative mr-48 rounded-2xl overflow-hidden">
                       <div 
                         className="w-full h-full bg-gray-700/50 border-2 border-dashed border-gray-500 flex items-center justify-start pl-6 cursor-pointer hover:bg-gray-600/50 transition-colors duration-200"
                         onClick={handlePlusButtonClick}
